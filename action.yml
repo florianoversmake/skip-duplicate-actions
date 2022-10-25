@@ -1,6 +1,6 @@
 name: 'Skip Duplicate Actions'
 description: 'Skip duplicate workflow runs. Skip or ignore specific paths. Cancel outdated workflow runs.'
-author: 'fkirc'
+author: 'florianoversmake'
 branding:
   icon: 'stop-circle'
   color: 'white'

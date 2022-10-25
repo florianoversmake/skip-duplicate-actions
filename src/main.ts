@@ -4,6 +4,7 @@ import type {Endpoints} from '@octokit/types'
 import {GitHub} from '@actions/github/lib/utils'
 import micromatch from 'micromatch'
 import yaml from 'js-yaml'
+import promiseRetry from 'promise-retry'
 
 type ApiWorkflowRun =
   Endpoints['GET /repos/{owner}/{repo}/actions/runs/{run_id}']['response']['data']
@@ -461,10 +462,32 @@ async function main(): Promise<void> {
   const octokit = github.getOctokit(token)
 
   // Get and parse the current workflow run.
-  const {data: apiCurrentRun} = await octokit.rest.actions.getWorkflowRun({
-    ...repo,
-    run_id: github.context.runId
-  })
+  const apiCurrentRun = await promiseRetry(
+    async retry => {
+      try {
+        const {data: _apiCurrentRun} =
+          await octokit.rest.actions.getWorkflowRun({
+            ...repo,
+            run_id: github.context.runId
+          })
+
+        return _apiCurrentRun
+      } catch (err) {
+        retry(err)
+      }
+    },
+    {
+      retries: 5,
+      minTimeout: 1000
+    }
+  )
+
+  if (!apiCurrentRun) {
+    exitFail(`
+        Could not get api run
+      `)
+  }
+
   const currentTreeHash = apiCurrentRun.head_commit?.tree_id
   if (!currentTreeHash) {
     exitFail(`
@@ -475,19 +498,38 @@ async function main(): Promise<void> {
   }
   const currentRun = mapWorkflowRun(apiCurrentRun, currentTreeHash)
 
-  // Fetch list of runs for current workflow.
-  const {
-    data: {workflow_runs: apiAllRuns}
-  } = await octokit.rest.actions.listWorkflowRuns({
-    ...repo,
-    workflow_id: currentRun.workflowId,
-    per_page: 100
-  })
+  const apiAllRuns = await promiseRetry(
+    async retry => {
+      try {
+        const {
+          data: {workflow_runs: _apiAllRuns}
+        } = await octokit.rest.actions.listWorkflowRuns({
+          ...repo,
+          workflow_id: currentRun.workflowId,
+          per_page: 100
+        })
+
+        return _apiAllRuns
+      } catch (err) {
+        retry(err)
+      }
+    },
+    {
+      retries: 5,
+      minTimeout: 1000
+    }
+  )
 
   // List with all workflow runs.
   const allRuns = []
   // List with older workflow runs only (used to prevent some nasty race conditions and edge cases).
   const olderRuns = []
+
+  if (!apiAllRuns) {
+    exitFail(`
+        Could not get allRuns
+      `)
+  }
 
   // Check and map all runs.
   for (const run of apiAllRuns) {
