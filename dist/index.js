@@ -331,7 +331,8 @@ function main() {
         const repo = github.context.repo;
         const octokit = github.getOctokit(token);
         // Get and parse the current workflow run.
-        const apiCurrentRun = yield (0, promise_retry_1.default)((retry) => __awaiter(this, void 0, void 0, function* () {
+        const apiCurrentRun = yield (0, promise_retry_1.default)((retry, num) => __awaiter(this, void 0, void 0, function* () {
+            core.info(`getWorkflowRun(${num})`);
             try {
                 const { data: _apiCurrentRun } = yield octokit.rest.actions.getWorkflowRun(Object.assign(Object.assign({}, repo), { run_id: github.context.runId }));
                 return _apiCurrentRun;
@@ -357,7 +358,8 @@ function main() {
       `);
         }
         const currentRun = mapWorkflowRun(apiCurrentRun, currentTreeHash);
-        const apiAllRuns = yield (0, promise_retry_1.default)((retry) => __awaiter(this, void 0, void 0, function* () {
+        const apiAllRuns = yield (0, promise_retry_1.default)((retry, num) => __awaiter(this, void 0, void 0, function* () {
+            core.info(`listWorkflowRuns(${num})`);
             try {
                 const { data: { workflow_runs: _apiAllRuns } } = yield octokit.rest.actions.listWorkflowRuns(Object.assign(Object.assign({}, repo), { workflow_id: currentRun.workflowId, per_page: 100 }));
                 return _apiAllRuns;

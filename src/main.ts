@@ -463,7 +463,9 @@ async function main(): Promise<void> {
 
   // Get and parse the current workflow run.
   const apiCurrentRun = await promiseRetry(
-    async retry => {
+    async (retry, num) => {
+      core.info(`getWorkflowRun(${num})`)
+
       try {
         const {data: _apiCurrentRun} =
           await octokit.rest.actions.getWorkflowRun({
@@ -499,7 +501,9 @@ async function main(): Promise<void> {
   const currentRun = mapWorkflowRun(apiCurrentRun, currentTreeHash)
 
   const apiAllRuns = await promiseRetry(
-    async retry => {
+    async (retry, num) => {
+      core.info(`listWorkflowRuns(${num})`)
+
       try {
         const {
           data: {workflow_runs: _apiAllRuns}
